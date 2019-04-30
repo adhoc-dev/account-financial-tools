@@ -94,7 +94,8 @@ class AccountInvoice(models.Model):
         readonly=True,
     )
     document_type_internal_type = fields.Selection(
-        related='document_type_id.internal_type',
+        related='journal_document_type_id.document_type_id.internal_type',
+        copy=False,
         readonly=True,
     )
 
