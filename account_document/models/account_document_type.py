@@ -1,27 +1,21 @@
 from odoo import fields, models, api
-# from odoo.exceptions import UserError
 
 
 class AccountDocmentType(models.Model):
-    _name = 'account.document.type'
-    _description = 'Account Document Type'
+    _name = 'l10n_latam.document.type'
+    _description = 'Latam Document Type'
     _order = 'sequence, id asc'
 
-    def _get_localizations(self):
-        localizations = self.env['res.company']._fields[
-            'localization']._description_selection(self.env)
-        return localizations
 
     sequence = fields.Integer(
         default=10,
         required=True,
         help="Used to order records in tree views and relational fields"
     )
-    localization = fields.Selection(
-        _get_localizations,
-        'Localization',
-        help='If you set a localization here then it will be available only '
-        'for companies of this localization',
+    country_id = fields.Many2one(
+        'res.country',
+        string='Country',
+        required=True,
         index=True,
     )
     name = fields.Char(
@@ -36,53 +30,23 @@ class AccountDocmentType(models.Model):
     )
     code = fields.Char(
         'Code',
-        help='Code used by differents localizations',
+        help='Code used by different localizations',
     )
     report_name = fields.Char(
         'Name on Reports',
         help='Name that will be printed in reports, for example "CREDIT NOTE"'
     )
-    internal_type = fields.Selection([
-        ('invoice', 'Invoices'),
-        ('debit_note', 'Debit Notes'),
-        ('credit_note', 'Credit Notes'),
-        ('ticket', 'Ticket'),
-        ('receipt_invoice', 'Receipt Invoice'),
-        ('customer_payment', 'Customer Voucer'),
-        ('supplier_payment', 'Supplier Invoice'),
-        # ('inbound_payment_voucher', 'Inbound Payment Voucer'),
-        # ('outbound_payment_voucher', 'Outbound Payment Voucer'),
-        ('in_document', 'In Document'),
-    ],
+    # analog to odoo account.invoice.type but with more options allowing to
+    # identifiy the kind of domecunt we are working with. (not only
+    # related to account.invoice, could be for documents of other models like
+    # stock.picking)
+    internal_type = fields.Selection([],
         string='Internal Type',
         index=True,
-        help='On each localization each document type may have a different use'
-        # help='It defines some behaviours on different places:\
-        # * invoice: used on sale and purchase journals. Auto selected if not\
-        # debit_note specified on context.\
-        # * debit_note: used on sale and purchase journals but with lower\
-        # priority than invoices.\
-        # * credit_note: used on sale_refund and purchase_refund journals.\
-        # * ticket: automatically loaded for purchase journals but only loaded\
-        # on sales journals if point_of_sale is fiscal_printer\
-        # * receipt_invoice: mean to be used as invoices but not automatically\
-        # loaded because it is not usually used\
-        # * in_document: automatically loaded for purchase journals but not \
-        # loaded on sales journals. Also can be selected on partners, to be \
-        # available it must be selected on partner.\'
-    )
-    active = fields.Boolean(
-        'Active',
-        default=True
     )
     validator_id = fields.Many2one(
         'base.validator',
         'Validator',
-    )
-    taxes_included = fields.Boolean(
-        'Taxes Included?',
-        help='Documents of this type will include taxes on reports. This '
-        'behaviour could be overwritten by localizations!',
     )
 
     @api.multi
@@ -103,22 +67,12 @@ class AccountDocmentType(models.Model):
         return result
 
     @api.multi
-    def get_document_sequence_vals(self, journal):
-        self.ensure_one()
-        # TODO we could improove this and add a field for templating numbering
-        return {
-            'name': '%s - %s' % (journal.name, self.name),
-            'padding': 8,
-            'prefix': self.code,
-        }
-
-    @api.multi
-    def get_taxes_included(self):
-        """
-        This method is to be inherited by differents localizations and should
-        return which taxes should be included or not on reports of this
-        document type
+    def _get_taxes_included(self):
+        """ This method is to be inherited by different localizations and
+        must return the recordset of the taxes to be included on reports of
+        this document type.
+        All taxes are going to be discriminated except the one returned by
+        this method.
         """
         self.ensure_one()
-        return self.taxes_included and self.env[
-            'account.tax'].search([]) or self.env['account.tax']
+        return self.env['account.tax']

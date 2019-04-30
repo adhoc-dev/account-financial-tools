@@ -1,9 +1,4 @@
-##############################################################################
-# For copyright and license notices, see __manifest__.py file in module root
-# directory
-##############################################################################
 from odoo import models, fields, api
-# from odoo.exceptions import UserError
 import logging
 _logger = logging.getLogger(__name__)
 
@@ -11,7 +6,7 @@ _logger = logging.getLogger(__name__)
 class AccountInvoiceLine(models.Model):
     _inherit = "account.invoice.line"
 
-    report_price_unit = fields.Monetary(
+    price_unit = fields.Monetary(
         string='Unit Price',
         compute='_compute_report_prices_and_taxes'
     )

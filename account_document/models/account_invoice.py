@@ -1,32 +1,13 @@
-##############################################################################
-# For copyright and license notices, see __manifest__.py file in module root
-# directory
-##############################################################################
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
-# import odoo.addons.decimal_precision as dp
-# import re
-# from odoo.tools.misc import formatLang
 import logging
 _logger = logging.getLogger(__name__)
 
 
 class AccountInvoice(models.Model):
-    """
-    about name_get and display name:
-    * in this model name_get and name_search are re-defined so we overwrite
-    them
-    * we add display_name to replace name field use, we add
-     with search funcion. This field is used then for name_get and name_search
 
-    Acccoding this https://www.odoo.com/es_ES/forum/ayuda-1/question/
-    how-to-override-name-get-method-in-new-api-61228
-    we should modify name_get, we do that by creating a helper display_name
-    field and also overwriting name_get to use it
-    """
     _inherit = "account.invoice"
     _order = "date_invoice desc, document_number desc, number desc, id desc"
-    # _order = "document_number desc, number desc, id desc"
 
     report_amount_tax = fields.Monetary(
         string='Tax',
@@ -98,22 +79,6 @@ class AccountInvoice(models.Model):
         copy=False,
         readonly=True,
     )
-
-# @api.multi
-# def _get_tax_amount_by_group(self):
-#     """ Method used by qweb invoice report. We are not using this report
-#     for now.
-#     """
-#     self.ensure_one()
-#     res = {}
-#     currency = self.currency_id or self.company_id.currency_id
-#     for line in self.report_tax_line_ids:
-#         res.setdefault(line.tax_id.tax_group_id, 0.0)
-#         res[line.tax_id.tax_group_id] += line.amount
-#     res = sorted(res.items(), key=lambda l: l[0].sequence)
-#     res = map(lambda l: (
-#         l[0].name, formatLang(self.env, l[1], currency_obj=currency)), res)
-#     return res
 
     @api.depends(
         'amount_untaxed', 'amount_tax', 'tax_line_ids', 'document_type_id')
@@ -248,7 +213,7 @@ class AccountInvoice(models.Model):
             rec.display_name = display_name
 
     @api.multi
-    def check_use_documents(self):
+    def _check_use_documents(self):
         """
         check invoices has document class but journal require it (we check
         all invoices, not only argentinian ones)
@@ -263,7 +228,7 @@ class AccountInvoice(models.Model):
                 'Invoices ids: %s' % without_doucument_class.ids))
 
     @api.multi
-    def get_localization_invoice_vals(self):
+    def _get_localization_invoice_vals(self):
         """
         Function to be inherited by different localizations and add custom
         data to invoice on invoice validation
@@ -277,13 +242,13 @@ class AccountInvoice(models.Model):
         We add currency rate on move creation so it can be used by electronic
         invoice later on action_number
         """
-        self.check_use_documents()
+        self._check_use_documents()
         res = super(AccountInvoice, self).action_move_create()
-        self.set_document_data()
+        self._set_document_data()
         return res
 
     @api.multi
-    def set_document_data(self):
+    def _set_document_data(self):
         """
         If journal document dont have any sequence, then document number
         must be set on the account.invoice and we use thisone
@@ -298,7 +263,7 @@ class AccountInvoice(models.Model):
             _logger.info(
                 'Setting document data on account.invoice and account.move')
             journal_document_type = invoice.journal_document_type_id
-            inv_vals = self.get_localization_invoice_vals()
+            inv_vals = self._get_localization_invoice_vals()
             if invoice.use_documents:
                 if not invoice.document_number:
                     if not invoice.journal_document_type_id.sequence_id:
@@ -323,21 +288,11 @@ class AccountInvoice(models.Model):
         return True
 
     @api.multi
-    # creo que por el parche de del def onchange no estaria funcionando
-    # y por eseo repetimos onchnage de cada elemento
-    # TODO analizar en v11
-    # @api.onchange('available_journal_document_type_ids')
     @api.onchange('journal_id', 'partner_id', 'company_id')
-    def onchange_available_journal_document_types(self):
+    def onchange_journal_partner_company(self):
         res = self._get_available_journal_document_types(
             self.journal_id, self.type, self.partner_id)
         self.journal_document_type_id = res['journal_document_type']
-        # las localizaciones no siempre devuelven el primero como el que debe
-        # sugerir por defecto, si cambiamos para que asi sea entonces podemos
-        # cambiar esto aca
-        # self.journal_document_type_id = self.\
-        #     available_journal_document_type_ids and self.\
-        #     available_journal_document_type_ids[0] or False
 
     @api.multi
     @api.depends('journal_id', 'partner_id', 'company_id')
@@ -359,12 +314,6 @@ class AccountInvoice(models.Model):
                 invoice.journal_id, invoice.type, invoice.partner_id)
             invoice.available_journal_document_type_ids = res[
                 'available_journal_document_types']
-            # esto antes lo haciamos aca pero computaba mal el proximo numero
-            # de factura cuando se seleccionaba otro tipo de doc que no sea
-            # el por defecto (por ej, nota de debito), lo separamos en un
-            # onchange aparte
-            # invoice.journal_document_type_id = res[
-            #     'journal_document_type']
 
     @api.multi
     def write(self, vals):
@@ -389,9 +338,8 @@ class AccountInvoice(models.Model):
     @api.model
     def _get_available_journal_document_types(
             self, journal, invoice_type, partner):
-        """
-        This function is to be inherited by differents localizations and MUST
-        return a dictionary with two keys:
+        """ This function is to be inherited by different localizations and
+        MUST return a dictionary with two keys:
         * 'available_journal_document_types': available document types on
         this invoice
         * 'journal_document_type': suggested document type on this invoice
@@ -405,25 +353,9 @@ class AccountInvoice(models.Model):
                 'journal_document_type':
                     self.env['account.journal.document.type'],
             }
-        # As default we return every journal document type, and if one exists
-        # then we return the first one as suggested
-        journal_document_types = journal.journal_document_type_ids
-        # if invoice is a refund only show credit_notes, else, not credit note
-        if invoice_type in ['out_refund', 'in_refund']:
-            journal_document_types = journal_document_types.filtered(
-                # lambda x: x.document_type_id.internal_type == 'credit_note')
-                lambda x: x.document_type_id.internal_type in [
-                    'credit_note', 'in_document'])
-        else:
-            journal_document_types = journal_document_types.filtered(
-                lambda x: x.document_type_id.internal_type != 'credit_note')
-        journal_document_type = (
-            journal_document_types and journal_document_types[0] or
-            journal_document_types)
-        return {
-            'available_journal_document_types': journal_document_types,
-            'journal_document_type': journal_document_type,
-        }
+        raise UserError(_(
+            'Method ot implemented by localization of %s') % (
+                journal.company_id.country_id.name))
 
     @api.multi
     @api.constrains('document_type_id', 'document_number')
