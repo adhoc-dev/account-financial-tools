@@ -1,21 +1,10 @@
-##############################################################################
-# For copyright and license notices, see __manifest__.py file in module root
-# directory
-##############################################################################
+# Part of Odoo. See LICENSE file for full copyright and licensing details.
 from odoo import models, api, fields, _
-import logging
-_logger = logging.getLogger(__name__)
 
 
 class AccountChartTemplate(models.Model):
-    _inherit = 'account.chart.template'
 
-    def _localization_use_documents(self, company):
-        """ This method is to be inherited by localizations and return
-        True if they want receiptbooks to be generated upon chart template
-        installation
-        """
-        return False
+    _inherit = 'account.chart.template'
 
     @api.multi
     def _load_template(
@@ -36,7 +25,7 @@ class AccountChartTemplate(models.Model):
         Overwrite this function so that no journal is created on chart
         installation
         """
-        if self._localization_use_documents(company):
+        if company._localization_use_documents():
             receiptbook_data = self._prepare_all_receiptbook_data(company)
             for receiptbook_vals in receiptbook_data:
                 self._check_created_receiptbooks(receiptbook_vals, company)
@@ -48,7 +37,7 @@ class AccountChartTemplate(models.Model):
         This method used for checking new receipbooks already created or not.
         If not then create new receipbook.
         """
-        receipbook = self.env['account.payment.receiptbook'].search([
+        receipbook = self.env['l10n_latam.account.payment.receiptbook'].search([
             ('name', '=', receiptbook_vals['name']),
             ('company_id', '=', company.id)])
         if not receipbook:
@@ -75,10 +64,8 @@ class AccountChartTemplate(models.Model):
             'manual': 2,
         }
         for sequence_type in ['automatic', 'manual']:
-            # for internal_type in [
-            #        'inbound_payment_voucher', 'outbound_payment_voucher']:
             for partner_type in ['supplier', 'customer']:
-                document_type = self.env['account.document.type'].search([
+                document_type = self.env['l10n_latam.document.type'].search([
                     ('internal_type', '=', '%s_payment' % partner_type)
                 ], limit=1)
                 if not document_type:
@@ -108,12 +95,12 @@ class AccountChartTemplate(models.Model):
             acc_template_ref, company, journals_dict)
 
         # if chart has localization, then we use documents by default
-        if self._localization_use_documents(company):
+        if company._localization_use_documents():
             for vals_journal in journal_data:
                 if vals_journal['type'] == 'sale':
-                    vals_journal['use_documents'] = self._context.get(
+                    vals_journal['l10n_latam_use_documents'] = self._context.get(
                         'sale_use_documents', True)
                 if vals_journal['type'] == 'purchase':
-                    vals_journal['use_documents'] = self._context.get(
+                    vals_journal['l10n_latam_use_documents'] = self._context.get(
                         'purchase_use_documents', True)
         return journal_data

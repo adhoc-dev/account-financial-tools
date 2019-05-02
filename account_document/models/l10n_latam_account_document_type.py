@@ -1,11 +1,12 @@
+# Part of Odoo. See LICENSE file for full copyright and licensing details.
 from odoo import fields, models, api
 
 
-class AccountDocmentType(models.Model):
+class L10nLatamAccountDocmentType(models.Model):
+
     _name = 'l10n_latam.document.type'
     _description = 'Latam Document Type'
-    _order = 'sequence, id asc'
-
+    _order = 'sequence, id'
 
     sequence = fields.Integer(
         default=10,
@@ -14,12 +15,10 @@ class AccountDocmentType(models.Model):
     )
     country_id = fields.Many2one(
         'res.country',
-        string='Country',
         required=True,
         index=True,
     )
     name = fields.Char(
-        'Name',
         required=True,
         index=True,
     )
@@ -29,7 +28,6 @@ class AccountDocmentType(models.Model):
         "For eg. 'FA ' will build 'FA 0001-0000001' Document Number"
     )
     code = fields.Char(
-        'Code',
         help='Code used by different localizations',
     )
     report_name = fields.Char(
