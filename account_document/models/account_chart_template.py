@@ -11,32 +11,6 @@ _logger = logging.getLogger(__name__)
 class AccountChartTemplate(models.Model):
     _inherit = 'account.chart.template'
 
-    def _get_localizations(self):
-        localizations = self.env['res.company']._fields[
-            'localization']._description_selection(self.env)
-        return localizations
-
-    localization = fields.Selection(
-        _get_localizations,
-        'Localization',
-        help='If you set the localization here, then when installing '
-        'this chart, this localization will be set on company'
-    )
-
-    @api.multi
-    def _load_template(
-            self, company, code_digits=None, account_ref=None, taxes_ref=None):
-        """
-        Set localization to company when installing chart of account.
-        """
-        self.ensure_one()
-        if not company.localization:
-            company.localization = self and self.localization
-        if company.localization:
-            self.generate_receiptbooks(company)
-        return super(AccountChartTemplate, self)._load_template(
-            company, code_digits, account_ref, taxes_ref)
-
     @api.model
     def generate_receiptbooks(
             self, company):

@@ -7,41 +7,6 @@ class AccountDocmentType(models.Model):
     _description = 'Account Document Type'
     _order = 'sequence, id asc'
 
-    def _get_localizations(self):
-        localizations = self.env['res.company']._fields[
-            'localization']._description_selection(self.env)
-        return localizations
-
-    sequence = fields.Integer(
-        default=10,
-        required=True,
-        help="Used to order records in tree views and relational fields"
-    )
-    localization = fields.Selection(
-        _get_localizations,
-        'Localization',
-        help='If you set a localization here then it will be available only '
-        'for companies of this localization',
-        index=True,
-    )
-    name = fields.Char(
-        'Name',
-        required=True,
-        index=True,
-    )
-    doc_code_prefix = fields.Char(
-        'Document Code Prefix',
-        help="Prefix for Documents Codes on Invoices and Account Moves. "
-        "For eg. 'FA ' will build 'FA 0001-0000001' Document Number"
-    )
-    code = fields.Char(
-        'Code',
-        help='Code used by differents localizations',
-    )
-    report_name = fields.Char(
-        'Name on Reports',
-        help='Name that will be printed in reports, for example "CREDIT NOTE"'
-    )
     internal_type = fields.Selection([
         ('invoice', 'Invoices'),
         ('debit_note', 'Debit Notes'),
