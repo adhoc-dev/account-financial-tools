@@ -22,7 +22,7 @@ class AccountPayment(models.Model):
         for payment in self:
             payment.is_internal_transfer = (payment.partner_id \
                                            and payment.partner_id == payment.journal_id.company_id.partner_id \
-                                           and payment.destination_journal_id) or not payment.partner_id
+                                           and payment.destination_journal_id)
 
         if self._context.get('is_internal_transfer_menu'):
             self.is_internal_transfer = True
